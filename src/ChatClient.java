@@ -2,9 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 
 public class ChatClient extends JFrame implements Runnable {
@@ -59,7 +57,26 @@ public class ChatClient extends JFrame implements Runnable {
         setSize(500, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null); // Center the frame
+
+        // set menubar
+        JMenuItem jmiViewHistory = new JMenuItem("View Chat History");
+        JMenuItem jmiConnect = new JMenuItem("Connect to");
+        JMenu connect = new JMenu("Connection");
+        connect.add(jmiConnect);
+        JMenu history = new JMenu("Histroy");
+        history.add(jmiViewHistory);
+        JMenuBar jmb = new JMenuBar();
+        jmb.add(connect);
+        jmb.add(history);
+        this.setJMenuBar(jmb);
+
+        // add action listener for menubar items
+        jmiViewHistory.addActionListener(e -> viewHistory());
+        jmiConnect.addActionListener(e -> connectToServer());
+
         setVisible(true); // It is necessary to show the frame here!
+
+
 
         try {
             // Create a socket to connect to the server
@@ -76,6 +93,47 @@ public class ChatClient extends JFrame implements Runnable {
         } catch (IOException ex) {
             jta.append(ex.toString() + '\n');
         }
+    }
+
+    /**
+     * read the history file, show it in an option pane
+     */
+    private void viewHistory() {
+        // create an output stream for the file we wanna read.
+        StringBuilder history = new StringBuilder("");
+        try {
+            // read the history file
+            String filename = jtfName.getText() + "-History.txt";
+            BufferedReader fin = new BufferedReader(new FileReader(filename));
+            String s;
+            while ((s = fin.readLine()) != null) {
+                history.append(s +'\n');
+            }
+
+            // test code
+            System.out.println("I am writing History for " + jtfName.getText() + ":");
+            System.out.println("Content is " + history + "\n\n");
+
+            // create an option pane to show the history
+            JScrollPane jspHistory = new JScrollPane(new JTextArea(history.toString()));
+            JOptionPane.showMessageDialog(null, jspHistory,
+                    "Chat History", JOptionPane.INFORMATION_MESSAGE, null);
+
+        } catch (IOException ex) {
+            System.err.println(ex);
+        }
+        System.out.println("hello world");
+    }
+
+    /**
+     *
+     */
+    private void connectToServer() {
+        System.out.println("Hello world");
+        String serverIP = JOptionPane.showInputDialog(null,
+                "Server IP:",
+                "JOptionPaneDemo", JOptionPane.QUESTION_MESSAGE);
+
     }
 
     private class ButtonListener implements ActionListener {
@@ -101,6 +159,12 @@ public class ChatClient extends JFrame implements Runnable {
             while (true) {
                 // Get message
                 String text = din.readUTF();
+
+                // wtite chat history to a file
+                String filename = jtfName.getText() + "-History.txt";
+                FileWriter fw = new FileWriter(filename, true);
+                fw.write(text+'\n');
+                fw.close();
 
                 // Display to the text area
                 jta.append(text + '\n');

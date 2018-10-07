@@ -1,8 +1,8 @@
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+
 import javax.swing.*;
 import java.awt.*;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
@@ -39,6 +39,11 @@ public class ChatServer extends JFrame {
         listen();
     }
 
+
+    /**
+     * listen for a connection, create a mapping socket --> output stream
+     * to write message to it.
+     */
     private void listen() {
         try {
             // Create a server socket
@@ -58,7 +63,7 @@ public class ChatServer extends JFrame {
                 // Save output stream to hashtable
                 outputStreams.put(socket, dout);
 
-                // Create a new thread for the connection
+                // Create a new thread for the connection, this thread
                 new ServerThread(this, socket);
             }
         } catch (IOException ex) {
@@ -67,12 +72,12 @@ public class ChatServer extends JFrame {
     }
 
     // Used to get the output streams
-    Enumeration getOutputStreams() {
+    private Enumeration getOutputStreams() {
         return outputStreams.elements();
     }
 
     // Used to send message to all clients
-    void sendToAll(String message) {
+    private void sendToAll(String message) {
         // Go through hashtable and send message to each output stream
         for (Enumeration e = getOutputStreams(); e.hasMoreElements(); ) {
             DataOutputStream dout = (DataOutputStream) e.nextElement();
@@ -87,17 +92,16 @@ public class ChatServer extends JFrame {
 
 
     class ServerThread extends Thread {
-
         private ChatServer server;
-
         private Socket socket;
 
         /**
          * Construct a thread
          */
-        public ServerThread(ChatServer server, Socket socket) {
+        public ServerThread(ChatServer server, Socket socket) throws IOException {
             this.socket = socket;
             this.server = server;
+
             start();
         }
 
@@ -111,13 +115,16 @@ public class ChatServer extends JFrame {
 
                 // Continuously serve the client
                 while (true) {
-                    String string = din.readUTF();
+                    // read incoming message
+                    String message = din.readUTF();
+                    DataOutputStream history = new DataOutputStream(new FileOutputStream("chatHistory.dat", true));
+                    history.writeUTF(message);
 
-                    // Send text back to the clients
-                    server.sendToAll(string);
+                    // Send text back to all the clients
+                    server.sendToAll(message);
 
                     // Add chat to the server jta
-                    jta.append(string + '\n');
+                    jta.append(message + '\n');
                 }
             } catch (IOException e) {
                 System.err.println(e);
