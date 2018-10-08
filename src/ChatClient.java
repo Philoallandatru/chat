@@ -5,7 +5,19 @@ import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.Socket;
 
+// todo: write comments and specifications for fucntions or statements
+// todo: thread safety
+// todo: encapsulation
+// todo: rewrite this with MVC
+// todo: provide function of disconnect
+// todo: enable port number to be user-defined
+// todo: history function should make a directory to store the chat history files.
+
 public class ChatClient extends JFrame implements Runnable {
+    public static void main(String[] args) {
+        new ChatClient();
+    }
+
     // Text field for chat
     private JTextField jtf = new JTextField();
 
@@ -22,11 +34,15 @@ public class ChatClient extends JFrame implements Runnable {
     private DataOutputStream dout;
     private DataInputStream din;
 
-    public static void main(String[] args) {
-        new ChatClient();
-    }
+    // Server Information
+    private static String serverIP = "localhost";
+    private static int serverPort;
 
-    public ChatClient() {
+
+    /**
+     * initialize the GUI window,
+     */
+    private ChatClient() {
         // Panel p1 to hold the label and text field
         JPanel p1 = new JPanel();
         p1.setLayout(new BorderLayout());
@@ -76,11 +92,13 @@ public class ChatClient extends JFrame implements Runnable {
 
         setVisible(true); // It is necessary to show the frame here!
 
+    }
 
-
+    private void connect() {
         try {
             // Create a socket to connect to the server
-            socket = new Socket("localhost", 8000);
+            System.out.println(serverIP);
+            socket = new Socket(serverIP, 8000);
 
             // Create an input stream to receive data from the server
             din = new DataInputStream(socket.getInputStream());
@@ -94,7 +112,6 @@ public class ChatClient extends JFrame implements Runnable {
             jta.append(ex.toString() + '\n');
         }
     }
-
     /**
      * read the history file, show it in an option pane
      */
@@ -129,11 +146,16 @@ public class ChatClient extends JFrame implements Runnable {
      *
      */
     private void connectToServer() {
-        System.out.println("Hello world");
-        String serverIP = JOptionPane.showInputDialog(null,
+        System.out.println(serverIP);
+        // System.out.println("Invoking connectToServer() method....");
+        serverIP = JOptionPane.showInputDialog(null,
                 "Server IP:",
-                "JOptionPaneDemo", JOptionPane.QUESTION_MESSAGE);
-
+                "Server IP Address", JOptionPane.QUESTION_MESSAGE).trim();
+        System.out.println(serverIP);
+        String portNumber = JOptionPane.showInputDialog(null,
+                "Enter Server Port Number:", "Server Port Number", JOptionPane.QUESTION_MESSAGE).trim();
+        // todo: use regex to be sure that they are legal
+        this.connect();
     }
 
     private class ButtonListener implements ActionListener {
