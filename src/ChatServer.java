@@ -1,13 +1,9 @@
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
-
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.Hashtable;
+import java.util.*;
 
 public class ChatServer extends JFrame {
     // Text area for displaying contents
@@ -15,14 +11,17 @@ public class ChatServer extends JFrame {
     // Mapping of sockets to output streams
     private Hashtable outputStreams = new Hashtable();
 
+    // Mapping of socket to id
+    private static Map<Socket, String> idOfSocket = new HashMap<>();
+
     // Server socket
-    private ServerSocket serverSocket;
+    private static ServerSocket serverSocket;
 
     public static void main(String[] args) {
         new ChatServer();
     }
 
-    public ChatServer() {
+    private ChatServer() {
         // Place text area on the frame
         setLayout(new BorderLayout());
         add(new JScrollPane(jta), BorderLayout.CENTER);
@@ -91,6 +90,9 @@ public class ChatServer extends JFrame {
     }
 
 
+    /**
+     *
+     */
     class ServerThread extends Thread {
         private ChatServer server;
         private Socket socket;
@@ -117,6 +119,7 @@ public class ChatServer extends JFrame {
                 while (true) {
                     // read incoming message
                     String message = din.readUTF();
+
                     DataOutputStream history = new DataOutputStream(new FileOutputStream("chatHistory.dat", true));
                     history.writeUTF(message);
 

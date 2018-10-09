@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -6,12 +7,16 @@ import java.io.*;
 import java.net.Socket;
 
 // todo: write comments and specifications for fucntions or statements
-// todo: thread safety
-// todo: encapsulation
+// !!  todo: thread safety
+// !!! todo: encapsulation
 // todo: rewrite this with MVC
 // todo: provide function of disconnect
 // todo: enable port number to be user-defined
 // todo: history function should make a directory to store the chat history files.
+// todo: add help menu
+// todo: are you sure to use regex to do it?????
+// todo: add radio buttons
+// !   todo:
 
 public class ChatClient extends JFrame implements Runnable {
     public static void main(String[] args) {
@@ -27,7 +32,7 @@ public class ChatClient extends JFrame implements Runnable {
     // Text area to display contents
     private JTextArea jta = new JTextArea();
 
-    // Socket
+    // Socket connected with Server
     private Socket socket;
 
     // IO streams
@@ -38,9 +43,13 @@ public class ChatClient extends JFrame implements Runnable {
     private static String serverIP = "localhost";
     private static int serverPort;
 
+    // Client Status
+    private static JRadioButton jrbStatusFree = new JRadioButton("Free", true);
+    private static JRadioButton jrbStatusBusy = new JRadioButton("Busy", false);
+    private static Boolean isFree = true;
 
     /**
-     * initialize the GUI window,
+     * Initialize the GUI window,
      */
     private ChatClient() {
         // Panel p1 to hold the label and text field
@@ -54,6 +63,13 @@ public class ChatClient extends JFrame implements Runnable {
         p2.setLayout(new BorderLayout());
         p2.add(new JLabel("Name"), BorderLayout.WEST);
         p2.add(jtfName, BorderLayout.CENTER);
+
+        // Panel p3 contains radio button to specify the status of the Client
+        JPanel p3 = new JPanel();
+        p3.setLayout(new BorderLayout());
+        p3.add(jrbStatusFree, BorderLayout.WEST);
+        p3.add(jrbStatusBusy, BorderLayout.CENTER);
+        p2.add(p3, BorderLayout.EAST);
 
         // Panel p to hold p1 and p2
         JPanel p = new JPanel();
@@ -77,41 +93,118 @@ public class ChatClient extends JFrame implements Runnable {
         // set menubar
         JMenuItem jmiViewHistory = new JMenuItem("View Chat History");
         JMenuItem jmiConnect = new JMenuItem("Connect to");
-        JMenu connect = new JMenu("Connection");
+        JMenuItem jmiManual = new JMenuItem("Manual");
+        JMenuItem jmiPersonallyChat = new JMenuItem("Chat to a Certain Person");
+        JMenuItem jmiRegisterIDConnect = new JMenuItem("Register ID and Connect");
+
+        JMenu connect = new JMenu("Connection"); // connect menu
         connect.add(jmiConnect);
-        JMenu history = new JMenu("Histroy");
+        connect.add(jmiPersonallyChat);
+        connect.add(jmiRegisterIDConnect);
+
+        JMenu history = new JMenu("History"); // history menu
         history.add(jmiViewHistory);
         JMenuBar jmb = new JMenuBar();
         jmb.add(connect);
         jmb.add(history);
-        this.setJMenuBar(jmb);
+        JMenu jmHelp = new JMenu("Help"); // help menu
+        jmb.add(jmHelp);
+        this.setJMenuBar(jmb); // put this menubar on this frame
 
         // add action listener for menubar items
         jmiViewHistory.addActionListener(e -> viewHistory());
         jmiConnect.addActionListener(e -> connectToServer());
+        jmiManual.addActionListener(e -> showHelpPane());
+        jmiPersonallyChat.addActionListener(e -> personallyChat());
+        jmiRegisterIDConnect.addActionListener(e -> registerIDandConnect());
+        jrbStatusBusy.addActionListener(e -> setStatusFree());
+        jrbStatusBusy.addActionListener(e -> setStatusBusy());
 
         setVisible(true); // It is necessary to show the frame here!
-
     }
 
-    private void connect() {
+    // Bug here.....
+    private void setStatusFree() {
+        if (!jrbStatusFree.isSelected()) {
+            jrbStatusFree.setSelected(true);
+            if (jrbStatusBusy.isSelected()) jrbStatusBusy.setSelected(false);
+            isFree = true;
+        } else {
+            jrbStatusFree.setSelected(false);
+            if (!jrbStatusBusy.isSelected()) jrbStatusBusy.setSelected(true);
+            isFree = false;
+        }
+        System.out.println("is Free:" + isFree);
+    }
+
+    /**
+     *
+     */
+    private void setStatusBusy() {
+        if (!jrbStatusBusy.isSelected()) {
+           jrbStatusBusy.setSelected(true);
+           if (jrbStatusFree.isSelected()) jrbStatusFree.setSelected(false);
+           isFree = false;
+        } else {
+            jrbStatusBusy.setSelected(false);
+            if (!jrbStatusFree.isSelected()) jrbStatusFree.setSelected(true);
+            isFree = true;
+
+        }
+        System.out.println("is Free:" + isFree);
+    }
+
+    /**
+     * Send the server a signal(///Register me) - this signal is so ugly
+     * Send the server your ID that you wanna register
+     * Receive the message that whether the ID has been used.
+     *      The will be a info OptionPane
+     * Invoke the normal connect() function
+     */
+    private void registerIDandConnect() {
+        // String name = JOptionPane.showInputDialog();
+    }
+
+    /**
+     * There are 2 two choice:
+     *      1. Implement this with the server filtering the message for clients
+     *          that want to chat personally, which involves that we have to implement
+     *              1. a flag(or non-message information) processing mechanism
+     *              2. Change the way we receiving and sending messages(this should be a heavy stuff)
+     *      2. Give every client a choice to start its own server(which is really P2P-like) JUST TO CONNECT
+     *          WITH A SINGLE PERSON. This make the code looks ugly, inefficent, akward, but much
+     *          easier to be implemented.
+     *
+     * @throws IOException
+     */
+    private void personallyChat() {
         try {
-            // Create a socket to connect to the server
-            System.out.println(serverIP);
-            socket = new Socket(serverIP, 8000);
-
-            // Create an input stream to receive data from the server
-            din = new DataInputStream(socket.getInputStream());
-
-            // Create an output stream to send data to the server
-            dout = new DataOutputStream(socket.getOutputStream());
-
-            // Start a new thread for receiving messages
-            new Thread(this).start();
+            // open a window to get the name of the use as its identifier
+            // send a certain message to the server that this is a special message
+            // send the ID to the server
+            // enter the ID your want to chat personally
+            // send the ID to the server
+            // the server searches it, if it doesn't find it, send the client something to
+            // tell him that this man doesn't exitsts.
+            // if the server finds it, just tell the client that it was fine, and the server start a mechanism that
+            //
+            String s = "I wanna talk to my love!";
+            dout.writeUTF(s);
         } catch (IOException ex) {
-            jta.append(ex.toString() + '\n');
+            System.err.println(ex);
+
         }
     }
+
+    private class Model {
+
+    }
+
+    private void showHelpPane() {
+
+        JScrollPane jspHelp = new JScrollPane(new JTextArea());
+    }
+
     /**
      * read the history file, show it in an option pane
      */
@@ -139,23 +232,53 @@ public class ChatClient extends JFrame implements Runnable {
         } catch (IOException ex) {
             System.err.println(ex);
         }
-        System.out.println("hello world");
     }
+
 
     /**
      *
      */
     private void connectToServer() {
-        System.out.println(serverIP);
+        // System.out.println(serverIP);
         // System.out.println("Invoking connectToServer() method....");
-        serverIP = JOptionPane.showInputDialog(null,
-                "Server IP:",
-                "Server IP Address", JOptionPane.QUESTION_MESSAGE).trim();
-        System.out.println(serverIP);
+
+        // System.out.println(serverIP);
+        if (!(serverIP = JOptionPane.showInputDialog(null,
+                "Server IP:", "Server IP Address",
+                JOptionPane.QUESTION_MESSAGE).trim()).matches
+                (("^(25[0-5]|2[0-4]\\d|[0-1]?\\d?\\d)" +
+                        "(\\.(25[0-5]|2[0-4]\\d|[0-1]?\\d?\\d)){3}$"))) {
+            serverIP = "localhost";
+            JOptionPane.showMessageDialog(null, "Address Illegal", "Error", JOptionPane.WARNING_MESSAGE);
+        }
+
         String portNumber = JOptionPane.showInputDialog(null,
                 "Enter Server Port Number:", "Server Port Number", JOptionPane.QUESTION_MESSAGE).trim();
         // todo: use regex to be sure that they are legal
         this.connect();
+    }
+
+    /**
+     * TODO: make sure that the connection has been established.
+     * Get the input and output stream here.
+     */
+    private void connect() {
+        try {
+            // Create a socket to connect to the server
+            System.out.println(serverIP);
+            socket = new Socket(serverIP, 8000);
+
+            // Create an input stream to receive data from the server
+            din = new DataInputStream(socket.getInputStream());
+
+            // Create an output stream to send data to the server
+            dout = new DataOutputStream(socket.getOutputStream());
+
+            // Start a new thread for receiving messages
+            new Thread(this).start();
+        } catch (IOException ex) {
+            jta.append(ex.toString() + '\n');
+        }
     }
 
     private class ButtonListener implements ActionListener {
