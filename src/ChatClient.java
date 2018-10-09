@@ -1,5 +1,4 @@
 import javax.swing.*;
-import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -95,12 +94,12 @@ public class ChatClient extends JFrame implements Runnable {
         JMenuItem jmiConnect = new JMenuItem("Connect to");
         JMenuItem jmiManual = new JMenuItem("Manual");
         JMenuItem jmiPersonallyChat = new JMenuItem("Chat to a Certain Person");
-        JMenuItem jmiRegisterIDConnect = new JMenuItem("Register ID and Connect");
+        JMenuItem jmiRegisterID = new JMenuItem("Register ID and Connect");
 
         JMenu connect = new JMenu("Connection"); // connect menu
         connect.add(jmiConnect);
         connect.add(jmiPersonallyChat);
-        connect.add(jmiRegisterIDConnect);
+        connect.add(jmiRegisterID);
 
         JMenu history = new JMenu("History"); // history menu
         history.add(jmiViewHistory);
@@ -116,7 +115,7 @@ public class ChatClient extends JFrame implements Runnable {
         jmiConnect.addActionListener(e -> connectToServer());
         jmiManual.addActionListener(e -> showHelpPane());
         jmiPersonallyChat.addActionListener(e -> personallyChat());
-        jmiRegisterIDConnect.addActionListener(e -> registerIDandConnect());
+        jmiRegisterID.addActionListener(e -> registerID());
         jrbStatusBusy.addActionListener(e -> setStatusFree());
         jrbStatusBusy.addActionListener(e -> setStatusBusy());
 
@@ -155,14 +154,26 @@ public class ChatClient extends JFrame implements Runnable {
     }
 
     /**
-     * Send the server a signal(///Register me) - this signal is so ugly
+     * Send the server a signal(///1111) - this signal is so ugly
      * Send the server your ID that you wanna register
      * Receive the message that whether the ID has been used.
      *      The will be a info OptionPane
      * Invoke the normal connect() function
      */
-    private void registerIDandConnect() {
-        // String name = JOptionPane.showInputDialog();
+    private void registerID() {
+        try {
+            dout.writeUTF("///1111");
+            String name = JOptionPane.showInputDialog(null,
+                "Enter ID You Want to Register:", "Register ID and Connect",
+                JOptionPane.QUESTION_MESSAGE);
+            dout.writeUTF(name);
+            String isNameUserd = din.readUTF();
+            if (isNameUserd.equals("true")) JOptionPane.showMessageDialog(null, "This ID has been used.",
+                        "Error", JOptionPane.WARNING_MESSAGE);
+        } catch (IOException ex) {
+            System.err.println(ex);
+        }
+
     }
 
     /**

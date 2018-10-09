@@ -1,3 +1,5 @@
+import com.sun.xml.internal.bind.v2.model.core.ID;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
@@ -9,11 +11,12 @@ public class ChatServer extends JFrame {
     // Text area for displaying contents
     private JTextArea jta = new JTextArea();
     // Mapping of sockets to output streams
-    private Hashtable outputStreams = new Hashtable();
+    private Hashtable outputStreams = new Hashtable(); // this should be included in the ClientInfo class
 
     // Mapping of socket to id
     private static Map<Socket, String> idOfSocket = new HashMap<>();
 
+    ClientsInfo clientsInfo = new ClientsInfo();
     // Server socket
     private static ServerSocket serverSocket;
 
@@ -89,6 +92,50 @@ public class ChatServer extends JFrame {
         }
     }
 
+    class ClientsInfo {
+
+        private Map<Socket, String> IDofSocket = new HashMap<>();
+
+
+        // todo: you seems to need this one only(instead of one above)
+        // but there is not enough time for me correct it???
+        private Map<String, Socket> socketOfID = new HashMap<>();
+
+
+        private Map<String, Boolean> isUserFreeToChatTo = new HashMap<>();
+        private Map<String, String> thisWantsToChatToThat = new HashMap<>();
+
+        public ClientsInfo() { }
+
+        public void registerAnID(Socket socket, String id) {
+            IDofSocket.put(socket, id);
+            socketOfID.put(id, socket);
+        }
+
+        public boolean hasClientRegistered(Socket socket) {
+            return this.IDofSocket.containsKey(socket);
+        }
+
+        public boolean isIDUsed(String name) {
+            return socketOfID.containsKey(name);
+        }
+
+        public Socket getSocketOfID(String name) {
+            // todo : this is dangerous!!!!
+            return socketOfID.get(name);
+        }
+
+        public String getIDofSocket(Socket socket) {
+            return IDofSocket.get(socket);
+        }
+
+        @Override
+        public String toString() {
+            // todo: reimplement this toString
+            return IDofSocket.toString();
+        }
+    }
+
 
     /**
      *
@@ -96,6 +143,8 @@ public class ChatServer extends JFrame {
     class ServerThread extends Thread {
         private ChatServer server;
         private Socket socket;
+        private DataInputStream din;
+        private DataOutputStream dout;
 
         /**
          * Construct a thread
@@ -112,25 +161,99 @@ public class ChatServer extends JFrame {
          */
         public void run() {
             try {
-                // Create data input and output streams
-                DataInputStream din = new DataInputStream(socket.getInputStream());
+                din = new DataInputStream(socket.getInputStream()); // Create data input and output streams
 
                 // Continuously serve the client
                 while (true) {
-                    // read incoming message
-                    String message = din.readUTF();
+                    String message = din.readUTF(); // read incoming message
 
-                    DataOutputStream history = new DataOutputStream(new FileOutputStream("chatHistory.dat", true));
-                    history.writeUTF(message);
+                    // DataOutputStream history = new DataOutputStream(new FileOutputStream("chatHistory.dat", true));
+                    // history.writeUTF(message);
+                    // todo: if this message is a signal, do something else
+                    if (message.startsWith("///")) { // is a signal
+                        processSignal(message);
+                    }
 
-                    // Send text back to all the clients
-                    server.sendToAll(message);
+                    server.sendToAll(message); // Send text back to all the clients
 
-                    // Add chat to the server jta
-                    jta.append(message + '\n');
+                    jta.append(message + '\n'); // Add chat to the server jta
                 }
             } catch (IOException e) {
                 System.err.println(e);
+            }
+        }
+
+        private void processSignal(String message) throws IOException {
+            String signal = message.substring(3);
+            ChatSignal mSignal = new ChatSignal(message);
+            try {
+                 // todo: we should have a HashMap that records: Signal Number ---> Signal Event
+                if (signal.equals("1111")) { // the client wanna register with its name
+                    String registerName = din.readUTF();
+
+                    boolean isNameUsedAlready = false;
+                    if (clientsInfo.isIDUsed(registerName)) isNameUsedAlready = true; // whether this name has been used
+                    else clientsInfo.registerAnID(socket, registerName); // store is with certain socket;
+
+                    dout = new DataOutputStream(socket.getOutputStream());
+                    dout.writeUTF("" + isNameUsedAlready);
+                    System.out.println(idOfSocket);
+
+                }
+                if (signal.equals("2222")) { // find a friend to chat
+                    if (clientsInfo.hasClientRegistered(socket))
+                        dout.writeUTF(mSignal.getErrorSignal()); // first send the client a message
+                    else dout.writeUTF(mSignal.getSuccessSignal());
+
+                    // ask the name of the user you wanna chat to
+                    String chatToWhom = din.readUTF();
+                    if (clientsInfo.isIDUsed(chatToWhom)) dout.writeUTF(mSignal.getSuccessSignal());
+                    else dout.writeUTF(mSignal.getErrorSignal()); // todo : should be user not found
+
+                    // ash the user one client choose whether he or she is willing to chat
+                    DataOutputStream askHimWillingOrNotToChat =
+                            new DataOutputStream(clientsInfo.getSocketOfID(chatToWhom).getOutputStream());
+                    askHimWillingOrNotToChat.writeUTF("Are you willing to chat with " + clientsInfo.getIDofSocket(socket));
+
+                }
+            } catch (IOException ex) {
+                throw new IOException();
+            }
+        }
+
+        // todo : maybe we caould consider the Signal as a class
+
+        /**
+         * This class is designed to group all the signal handling stuff together,
+         * The constructor is pretty strange,
+         */
+        class ChatSignal {
+            private String signal;
+            private String error = "error"; // todo: this should be a number ...
+            private String success = "success";
+            private Boolean isValidChatSignal = false;
+            public ChatSignal(String message) {
+                if (message.startsWith("///")) {
+                    // todo: as I say, there should be a container to store all the valid signal numbers
+                    // do it here to judge whether it is valid
+                    if (message.length() == 7) {
+                        isValidChatSignal = true;
+                    }
+                }
+                signal = message.substring(3);
+            }
+
+            public void handleThisSignal() {
+                // todo: also use a hashtable to choose the function to something according to the signal number
+
+            }
+
+            public String getErrorSignal() {
+                return this.error;
+            }
+
+            public String getSuccessSignal() {
+                return this.success;
             }
         }
     }
