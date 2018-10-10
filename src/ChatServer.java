@@ -129,13 +129,18 @@ public class ChatServer extends JFrame {
             return IDofSocket.get(socket);
         }
 
+        public void recordThisWantsToChatToThat(String thisOne, String thatOne) {
+            isUserFreeToChatTo.put(thisOne, false);
+            isUserFreeToChatTo.put(thatOne, false);
+            thisWantsToChatToThat.put(thisOne, thatOne);
+        }
+
         @Override
         public String toString() {
             // todo: reimplement this toString
             return IDofSocket.toString();
         }
     }
-
 
     /**
      *
@@ -183,6 +188,7 @@ public class ChatServer extends JFrame {
             }
         }
 
+        // todo: this should be move to the ChatSignal Module
         private void processSignal(String message) throws IOException {
             String signal = message.substring(3);
             ChatSignal mSignal = new ChatSignal(message);
@@ -200,10 +206,16 @@ public class ChatServer extends JFrame {
                     System.out.println(idOfSocket);
 
                 }
+
+                /*
+                 * SEND to heWantsToChat: succuss or user doesn't exist
+                 * GET from heWantsToChat: name he wants to chat to
+                 *
+                 */
                 if (signal.equals("2222")) { // find a friend to chat
                     if (clientsInfo.hasClientRegistered(socket))
                         dout.writeUTF(mSignal.getErrorSignal()); // first send the client a message
-                    else dout.writeUTF(mSignal.getSuccessSignal());
+                    else dout.writeUTF(mSignal.getUserDoesntExistSignal());
 
                     // ask the name of the user you wanna chat to
                     String chatToWhom = din.readUTF();
@@ -213,7 +225,22 @@ public class ChatServer extends JFrame {
                     // ash the user one client choose whether he or she is willing to chat
                     DataOutputStream askHimWillingOrNotToChat =
                             new DataOutputStream(clientsInfo.getSocketOfID(chatToWhom).getOutputStream());
-                    askHimWillingOrNotToChat.writeUTF("Are you willing to chat with " + clientsInfo.getIDofSocket(socket));
+                    askHimWillingOrNotToChat.writeUTF(mSignal.getWillingToAcceptChatRequest());
+                    String heWantsChatToYou = clientsInfo.getIDofSocket(socket);
+                    askHimWillingOrNotToChat.writeUTF(heWantsChatToYou);
+
+                    // receive the answer, this should be an important part of ChatSignal,
+                    // really useful to be reuse.
+                    DataInputStream inFromHimAbove =
+                            new DataInputStream(clientsInfo.getSocketOfID(chatToWhom).getInputStream());
+                    String answerFromHim = inFromHimAbove.readUTF();
+                    // todo: you shoudn't use "success" directly
+                    if (answerFromHim.equals("success")) {
+                        dout.writeUTF(mSignal.getSuccessSignal());
+                    } else dout.writeUTF(mSignal.getErrorSignal());
+
+                    // todo: this should be done in a model
+                    clientsInfo.recordThisWantsToChatToThat(heWantsChatToYou, chatToWhom);
 
                 }
             } catch (IOException ex) {
@@ -223,38 +250,6 @@ public class ChatServer extends JFrame {
 
         // todo : maybe we caould consider the Signal as a class
 
-        /**
-         * This class is designed to group all the signal handling stuff together,
-         * The constructor is pretty strange,
-         */
-        class ChatSignal {
-            private String signal;
-            private String error = "error"; // todo: this should be a number ...
-            private String success = "success";
-            private Boolean isValidChatSignal = false;
-            public ChatSignal(String message) {
-                if (message.startsWith("///")) {
-                    // todo: as I say, there should be a container to store all the valid signal numbers
-                    // do it here to judge whether it is valid
-                    if (message.length() == 7) {
-                        isValidChatSignal = true;
-                    }
-                }
-                signal = message.substring(3);
-            }
 
-            public void handleThisSignal() {
-                // todo: also use a hashtable to choose the function to something according to the signal number
-
-            }
-
-            public String getErrorSignal() {
-                return this.error;
-            }
-
-            public String getSuccessSignal() {
-                return this.success;
-            }
-        }
     }
 }

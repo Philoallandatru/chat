@@ -190,17 +190,21 @@ public class ChatClient extends JFrame implements Runnable {
      */
     private void personallyChat() {
         try {
-            // open a window to get the name of the use as its identifier
-            // send a certain message to the server that this is a special message
-            // send the ID to the server
             // enter the ID your want to chat personally
             // send the ID to the server
             // the server searches it, if it doesn't find it, send the client something to
             // tell him that this man doesn't exitsts.
             // if the server finds it, just tell the client that it was fine, and the server start a mechanism that
             //
-            String s = "I wanna talk to my love!";
-            dout.writeUTF(s);
+
+            // knows that am I legal
+            String amILegal = din.readUTF();
+
+            // todo: you shouldn't receive this as error message, this implementation is extremly ugly
+            if (amILegal.equals("error"))
+                JOptionPane.showMessageDialog(null, "You have Not Registered!", "Error",
+                    JOptionPane.ERROR_MESSAGE);
+
         } catch (IOException ex) {
             System.err.println(ex);
 
@@ -309,7 +313,7 @@ public class ChatClient extends JFrame implements Runnable {
         }
     }
 
-    // Gets mesages from other clients
+    // Gets messages from other clients
     public void run() {
         try {
             while (true) {
